@@ -63,7 +63,9 @@ RUN set -ex; \
 		truncate --size=0 "$LS_SETTINGS_DIR/log4j2.properties"; \
 	fi
 ENV LS_CONF_DIR /etc/logstash/conf.d
-cp /usr/logstash-settings/logstash.conf /etc/logstash/conf.d
+if [ -f "$LS_CONF_DIR/logstash.conf" ]; then \
+cp "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
+fi
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
