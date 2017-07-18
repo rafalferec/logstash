@@ -57,16 +57,11 @@ RUN set -ex; \
 	if [ -f "$LS_SETTINGS_DIR/logstash.yml" ]; then \
 		sed -ri 's!^path\.config:!#&!g' "$LS_SETTINGS_DIR/logstash.yml"; \
 	fi; \
-# if the "log4j2.properties" file exists (logstash 5.x), let's empty it out so we get the default: "logging only errors to the console"
-# 	if [ -f "$LS_SETTINGS_DIR/log4j2.properties" ]; then \
-# 		cp "$LS_SETTINGS_DIR/log4j2.properties" "$LS_SETTINGS_DIR/log4j2.properties.dist"; \
-# 		truncate --size=0 "$LS_SETTINGS_DIR/log4j2.properties"; \
-# 	fi
 ENV LS_CONF_DIR /etc/logstash/conf.d
 RUN set -ex; \
-if [ -f "$LS_CONF_DIR/logstash.conf" ]; then \
+
 cp "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
-fi
+
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
