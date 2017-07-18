@@ -1,69 +1,90 @@
-FROM openjdk:8-jre
+FROM 	stakater/java8-alpine:1.8.0_121
+LABEL	authors="Hazim <hazim_malik@hotmail.com>"
 
+# grab su-exec for easy step-down from root
 # install plugin dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		apt-transport-https \
-		libzmq5 \
-	&& rm -rf /var/lib/apt/lists/*
-
-# the "ffi-rzmq-core" gem is very picky about where it looks for libzmq.so
-RUN mkdir -p /usr/local/lib \
-	&& ln -s /usr/lib/*/libzmq.so.3 /usr/local/lib/libzmq.so
-
-# grab gosu for easy step-down from root
-ENV GOSU_VERSION 1.10
-RUN set -x \
-	&& wget -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)" \
-	&& wget -O /usr/local/bin/gosu.asc "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc" \
-	&& export GNUPGHOME="$(mktemp -d)" \
-	&& gpg --keyserver ha.pool.sks-keyservers.net --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 \
-	&& gpg --batch --verify /usr/local/bin/gosu.asc /usr/local/bin/gosu \
-	&& rm -rf "$GNUPGHOME" /usr/local/bin/gosu.asc \
-	&& chmod +x /usr/local/bin/gosu \
-	&& gosu nobody true
-
-RUN set -ex; \
-# https://artifacts.elastic.co/GPG-KEY-elasticsearch
-	key='46095ACC8548582C1A2699A9D27D666CD88E42B4'; \
-	export GNUPGHOME="$(mktemp -d)"; \
-	gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
-	gpg --export "$key" > /etc/apt/trusted.gpg.d/elastic.gpg; \
-	rm -rf "$GNUPGHOME"; \
-	apt-key list
+RUN 	apk add --no-cache 'su-exec>=0.2' libc6-compat libzmq
 
 # https://www.elastic.co/guide/en/logstash/5.0/installing-logstash.html#_apt
-RUN echo 'deb https://artifacts.elastic.co/packages/5.x/apt stable main' > /etc/apt/sources.list.d/logstash.list
+# https://artifacts.elastic.co/GPG-KEY-elasticsearch
+ENV 	GPG_KEY 46095ACC8548582C1A2699A9D27D666CD88E42B4
 
-ENV LOGSTASH_VERSION 5.5.0
-ENV LOGSTASH_DEB_VERSION 1:5.5.0-1
+ENV 	LOGSTASH_PATH /usr/share/logstash/bin
+ENV 	PATH $LOGSTASH_PATH:$PATH
 
-RUN set -ex; \
-	case "$LOGSTASH_VERSION" in \
-# W: http://packages.elastic.co/logstash/2.4/debian/dists/stable/Release.gpg: Signature by key 46095ACC8548582C1A2699A9D27D666CD88E42B4 uses weak digest algorithm (SHA1)
-# https://github.com/elastic/logstash/issues/5761
-		2.*) apt-get update -o 'APT::Hashes::SHA1::Weak=yes' ;; \
-		*) apt-get update ;; \
-	esac; \
-	apt-get install -y --no-install-recommends "logstash=$LOGSTASH_DEB_VERSION"; \
-	rm -rf /var/lib/apt/lists/*
+ARG 	LOGSTASH_VERSION=5.2.1
+ENV 	LOGSTASH_TARBALL="https://artifacts.elastic.co/downloads/logstash/logstash-5.2.1.tar.gz" \
+		LOGSTASH_TARBALL_ASC="https://artifacts.elastic.co/downloads/logstash/logstash-5.2.1.tar.gz.asc" \
+		LOGSTASH_TARBALL_SHA1="ba8c7fd6c3bb5455a5c86d7b4858d355cc7a26e8"
 
-ENV PATH /usr/share/logstash/bin:$PATH
+RUN 	set -ex; \
+		\
+		if [ -z "$LOGSTASH_TARBALL_SHA1" ] && [ -z "$LOGSTASH_TARBALL_ASC" ]; then \
+			echo >&2 'error: have neither a SHA1 _or_ a signature file -- cannot verify download!'; \
+			exit 1; \
+		fi; \
+		\
+		apk add --no-cache --virtual .fetch-deps \
+			ca-certificates \
+			gnupg \
+			openssl \
+			tar \
+		; \
+		\
+		wget -O logstash.tar.gz "$LOGSTASH_TARBALL"; \
+		\
+		if [ "$LOGSTASH_TARBALL_SHA1" ]; then \
+			echo "$LOGSTASH_TARBALL_SHA1 *logstash.tar.gz" | sha1sum -c -; \
+		fi; \
+		\
+		if [ "$LOGSTASH_TARBALL_ASC" ]; then \
+			wget -O logstash.tar.gz.asc "$LOGSTASH_TARBALL_ASC"; \
+			export GNUPGHOME="$(mktemp -d)"; \
+			gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$GPG_KEY"; \
+			gpg --batch --verify logstash.tar.gz.asc logstash.tar.gz; \
+			rm -r "$GNUPGHOME" logstash.tar.gz.asc; \
+		fi; \
+		\
+		dir="$(dirname "$LOGSTASH_PATH")"; \
+		\
+		mkdir -p "$dir"; \
+		tar -xf logstash.tar.gz --strip-components=1 -C "$dir"; \
+		rm logstash.tar.gz; \
+		\
+		apk del .fetch-deps; \
+		\
+		export LS_SETTINGS_DIR="$dir/config"; \
+	# if the "log4j2.properties" file exists (logstash 5.x), let's empty it out so we get the default: "logging only errors to the console"
+		if [ -f "$LS_SETTINGS_DIR/log4j2.properties" ]; then \
+			cp "$LS_SETTINGS_DIR/log4j2.properties" "$LS_SETTINGS_DIR/log4j2.properties.dist"; \
+			truncate -s 0 "$LS_SETTINGS_DIR/log4j2.properties"; \
+		fi; \
+		\
+	# set up some file permissions
+		for userDir in \
+			"$dir/config" \
+			"$dir/data" \
+		; do \
+			if [ -d "$userDir" ]; then \
+				chown -R stakater:stakater "$userDir"; \
+			fi; \
+		done; \
+		\
+		logstash --version
 
-# necessary for 5.0+ (overriden via "--path.settings", ignored by < 5.0)
-ENV LS_SETTINGS_DIR /etc/logstash
-# comment out some troublesome configuration parameters
-#   path.config: No config files found: /etc/logstash/conf.d/*
-RUN set -ex; \
-	if [ -f "$LS_SETTINGS_DIR/logstash.yml" ]; then \
-		sed -ri 's!^path\.config:!#&!g' "$LS_SETTINGS_DIR/logstash.yml"; \
-	fi; \
-ENV LS_CONF_DIR /etc/logstash/conf.d
-RUN set -ex; \
+# Add Defualt logstash config
+ADD		./config/default-logstash.conf /etc/logstash/conf.d/logstash.conf
 
-COPY "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
+# expose default config folder
+VOLUME	/etc/logstash/conf.d
 
-COPY docker-entrypoint.sh /
+# Simulate cmd behavior via environment variable
+# So that users are able to provice command line arguments to logstash
+ENV 	COMMAND "logstash -f /etc/logstash/conf.d/logstash.conf"
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["logstash", "-f /etc/logstash-settings/logstash.conf", "--config.reload.automatic"]
+# Make daemon service dir for logstash and place file
+# It will be started and maintained by the base image
+RUN 	mkdir -p /etc/service/logstash
+ADD 	start.sh /etc/service/logstash/run
 
+# Use base image's entrypoint
