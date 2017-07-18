@@ -65,5 +65,5 @@ COPY "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["logstash", "-f /etc/logstash/conf.d/logstash.conf", "--config.reload.automatic"]
+CMD ["logstash", "-f /etc/logstash-settings/logstash.conf", "--config.reload.automatic"]
 
