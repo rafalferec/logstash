@@ -57,13 +57,13 @@ RUN set -ex; \
 	if [ -f "$LS_SETTINGS_DIR/logstash.yml" ]; then \
 		sed -ri 's!^path\.config:!#&!g' "$LS_SETTINGS_DIR/logstash.yml"; \
 	fi; \
-ENV LS_CONF_DIR /etc/logstash/conf.d
-RUN set -ex; \
+# ENV LS_CONF_DIR /etc/logstash/conf.d
+# RUN set -ex; \
 
-COPY "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
+# COPY "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
 
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["logstash", "-f /etc/logstash-settings/logstash.conf", "--config.reload.automatic"]
+CMD ["logstash", "-f /etc/logstash-settings/conf.d/logstash.conf", "--config.reload.automatic"]
 
