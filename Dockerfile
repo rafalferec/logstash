@@ -60,9 +60,10 @@ RUN set -ex; \
 ENV LS_CONF_DIR /etc/logstash/conf.d
 RUN set -ex; \
 
-cp "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
+COPY "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
 
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["-e", ""]
+CMD ["logstash", "-f /etc/logstash/conf.d/logstash.conf", "--config.reload.automatic"]
+
