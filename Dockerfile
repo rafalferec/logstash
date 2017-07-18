@@ -48,7 +48,7 @@ RUN set -ex; \
 	rm -rf /var/lib/apt/lists/*
 
 ENV PATH /usr/share/logstash/bin:$PATH
-cp -b /usr/logstash-settings/logstash.conf /etc/logstash/conf.d/
+
 # necessary for 5.0+ (overriden via "--path.settings", ignored by < 5.0)
 ENV LS_SETTINGS_DIR /etc/logstash
 # comment out some troublesome configuration parameters
@@ -62,7 +62,8 @@ RUN set -ex; \
 		cp "$LS_SETTINGS_DIR/log4j2.properties" "$LS_SETTINGS_DIR/log4j2.properties.dist"; \
 		truncate --size=0 "$LS_SETTINGS_DIR/log4j2.properties"; \
 	fi
-
+ENV LS_CONF_DIR /etc/logstash/conf.d
+cp /usr/logstash-settings/logstash.conf /etc/logstash/conf.d
 COPY docker-entrypoint.sh /
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
