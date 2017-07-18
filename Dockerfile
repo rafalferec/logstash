@@ -63,6 +63,7 @@ RUN set -ex; \
 		truncate --size=0 "$LS_SETTINGS_DIR/log4j2.properties"; \
 	fi
 ENV LS_CONF_DIR /etc/logstash/conf.d
+RUN set -ex; \
 if [ -f "$LS_CONF_DIR/logstash.conf" ]; then \
 cp "/usr/logstash-settings/logstash.conf" "$LS_CONF_DIR"; \
 fi
