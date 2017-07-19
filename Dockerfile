@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 FROM jeanblanchard/busybox-java
 
 # Logstash version
@@ -26,3 +27,11 @@ COPY start.sh /usr/local/bin/
 ENTRYPOINT ["/usr/local/bin/start.sh"]
 
 CMD ["logstash"]
+=======
+FROM nginx
+FROM openjdk:8-jre
+ADD ./nginx.conf /etc/nginx/conf.d/default
+ADD /src /www
+FROM docker.elastic.co/logstash/logstash:5.5.0
+
+>>>>>>> fc57a99d9a42e05ed3633ffff55b380ed0e3496c
