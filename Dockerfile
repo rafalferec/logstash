@@ -1,6 +1,5 @@
 FROM alpine:3.5
 
-RUN sudo add-apt-repository ppa:webupd8team/java
 RUN sudo apt-get update
 RUN sudo apt-get install oracle-java8-installer
 
