@@ -3,4 +3,4 @@ RUN rm -f /usr/share/logstash/pipeline/logstash.conf
 ADD pipeline/ /usr/share/logstash/pipeline/
 ADD config/ /usr/share/logstash/config/
 
-CMD ["-f", "/usr/share/logstash/config/logstash.conf"]
+CMD ["logstash"]
