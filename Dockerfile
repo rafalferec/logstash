@@ -1,12 +1,4 @@
-FROM alpine:3.5
-RUN apt-get update && apt-get install -y --no-install-recommends
-RUN sudo apt-get install oracle-java8-installer
-
-RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
-RUN sudo apt-get install apt-transport-https
-
-RUN echo "deb https://artifacts.elastic.co/packages/5.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-5.x.list
-
-RUN sudo apt-get update && sudo apt-get install logstash
-
-CMD ["logstash", "-f /conf.d/logstash.conf"]
+FROM docker.elastic.co/logstash/logstash:5.5.0
+RUN rm -f /usr/share/logstash/pipeline/logstash.conf
+ADD pipeline/ /usr/share/logstash/pipeline/
+ADD config/ /usr/share/logstash/config/
