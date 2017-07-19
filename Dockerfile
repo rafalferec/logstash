@@ -1,5 +1,5 @@
 FROM alpine:3.5
-
+RUN apt-get update && apt-get install -y --no-install-recommends
 RUN sudo apt-get install oracle-java8-installer
 
 RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
