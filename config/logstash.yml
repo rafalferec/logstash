@@ -1,0 +1,4 @@
+http.host: "0.0.0.0"
+http.port: 443
+path.config: /usr/share/logstash/pipeline/logstash.conf
+xpack.monitoring.enabled: false
