@@ -7,3 +7,4 @@ RUN rm -f /usr/share/logstash/config/logstash.conf
 RUN rm -f /usr/share/logstash/config/logstash.yml
 ADD pipeline/ /usr/share/logstash/pipeline/
 ADD config/ /usr/share/logstash/config/
+EXPOSE 443
